@@ -1,7 +1,7 @@
 # DSH 会话轮次删除（turn-delete）
 
-给 [DSH（DeepSeek Harness）](https://github.com/deepseek-ai) 用的插件：**勾选会话里的某几轮问答，
-把它们从"模型能看到的历史"里删掉**——聊天记录和磁盘日志的原文仍然保留。
+给 [DSH（DeepSeek Harness）](https://github.com/1772538871/dsh-proto) 用的插件：
+**勾选会话里的某几轮问答，把它们从"模型能看到的历史"里删掉**——聊天记录和磁盘日志的原文仍然保留。
 
 它不是"改显示"，而是改**模型实际收到的上下文**：删掉的轮次之后不会再出现在任何一次请求里，
 不占 token、不干扰注意力。相当于手动把上下文整理干净。
@@ -10,13 +10,43 @@
 
 ---
 
+## 30 秒装好：让 AI 帮你装
+
+> 这一节是给"不想碰命令行、不想看原理"的人准备的。详细步骤和排错见 **[INSTALL.md](INSTALL.md)**。
+
+把下面整段复制给你的 AI（**DSH 自带的 Agent 最好用**，因为它能直接调 `plugin_manager`）：
+
+```text
+请帮我安装一个 DSH 插件 dsh-turn-delete，按这个流程，不要跳步：
+
+1. 找到本机仓库里的插件目录 dsh-turn-delete-plugin（里面应有 package.json、index.js、
+   client.js、cordis.patch.yml）。如果本机还没有这个仓库，先：
+   git clone https://github.com/1772538871/dsh-proto
+   （克隆到合适的位置，不要放系统目录。）
+
+2. 拿到该目录的绝对路径后执行：
+   plugin_manager(action="install_bundle", target="<那个绝对路径>")
+
+3. 读返回值：application == "applied" 且 enabled == true 才算成功；否则把 error /
+   warnings / nextStep 原文贴给我，不要自己猜着改。
+
+4. 成功后调用 plugin_manager(action="list_plugins")，确认 entryId 为
+   include:dsh-turn-delete 的行 enabled: true。
+
+5. 最后告诉我：装到了哪个 profile、我要按什么键刷新页面、刷新后右上角应该看到什么按钮。
+```
+
+装完按 **Ctrl+F5** 刷新，会话右上角（文件夹图标左边）出现「**选择对话**」就是装好了。
+
+---
+
 ## 目录
 
 - [效果](#效果)
+- [怎么用](#怎么用)
 - [它是怎么工作的](#它是怎么工作的)
-- [安装](#安装)
-- [使用](#使用)
 - [会删除什么、不会删除什么](#会删除什么不会删除什么)
+- [安装（手动 / 排错）](#安装手动--排错)
 - [附带工具（谨慎使用）](#附带工具谨慎使用)
 - [仓库结构](#仓库结构)
 - [许可](#许可)
@@ -47,6 +77,30 @@
 
 ---
 
+## 怎么用
+
+### 图形界面
+
+1. 打开任意会话 → 右上角「**选择对话**」；
+2. 弹窗里勾选要删的轮次（可多选）；
+3. 点「**删除 N 轮**」。
+
+- **成功**：弹窗关闭，头部出现「已移除第 N 轮（模型此后看不到，日志原文保留）」，
+  聊天里该轮变浅加删除线，并留下一条 `turn-delete` 命令回执；
+- **失败**：弹窗**不会关**，底部用红字写明原因（例如"第 N 轮已经不在模型视野里了"）。
+
+### 命令行
+
+在输入框直接敲：
+
+```text
+/turn-delete 2          # 删第 2 轮
+/turn-delete 2,3        # 删第 2、3 轮
+/turn-delete 5-7        # 删第 5 到第 7 轮
+```
+
+---
+
 ## 它是怎么工作的
 
 DSH 把"历史"分成两套东西：
@@ -66,60 +120,7 @@ DSH 把"历史"分成两套东西：
 > 而且插件的渲染契约只允许"加行"，不允许隐藏别人的行。所以视觉上是"变浅 + 删除线"，
 > 语义上是"已经不在上下文里"。
 
----
-
-## 安装
-
-### 环境要求
-
-- 已安装并可运行的 DSH（Web GUI，`http://127.0.0.1:3080`）
-- 插件使用 DSH 的 bundle 机制，需要宿主支持 `plugin_manager` 的 `install_bundle`
-
-### 步骤
-
-1. 把本仓库的 `dsh-turn-delete-plugin/` 目录放到本机任意位置（例如 `D:\dsh-turn-delete-plugin`），
-   **路径里不要有空格以外的特殊字符**，并记住绝对路径。
-
-2. 在 DSH 的对话里，让 Agent 执行安装（最简单）：
-
-   > 用 plugin_manager 的 install_bundle，target 填 `D:\dsh-turn-delete-plugin`
-
-   也可以在插件管理界面里手动安装该目录。
-
-3. **刷新页面（Ctrl+F5）**。会话头部右上角会出现「选择对话」按钮。
-
-安装完成后，插件行 id 是 `include:dsh-turn-delete`。以后如果改了 `index.js`（宿主端），
-需要在插件管理里把这一行**停用再启用**才会重新加载；只改样式/界面则刷新页面即可。
-
-### 卸载
-
-在插件管理里停用并移除 `dsh-turn-delete` 这个 bundle 即可。已删除的轮次记录仍在日志里，
-不会因为卸载插件而恢复。
-
----
-
-## 使用
-
-### 图形界面
-
-1. 打开任意会话 → 右上角「**选择对话**」；
-2. 弹窗里勾选要删的轮次（可多选）；
-3. 点「**删除 N 轮**」。
-
-成功：弹窗关闭，头部出现「已移除第 N 轮（模型此后看不到，日志原文保留）」，
-聊天里该轮变浅加删除线，并留下一条 `turn-delete` 命令回执。
-
-失败：弹窗**不会关**，底部用红字写明原因（例如"第 N 轮已经不在模型视野里了"）。
-
-### 命令行
-
-在输入框直接敲：
-
-```
-/turn-delete 2          # 删第 2 轮
-/turn-delete 2,3        # 删第 2、3 轮
-/turn-delete 5-7        # 删第 5 到第 7 轮
-```
+更完整的原理与实测记录见 [删除对话-方案分析.md](删除对话-方案分析.md)。
 
 ---
 
@@ -144,6 +145,27 @@ DSH 把"历史"分成两套东西：
 2. 注入型上下文（`system-reminder`、AGENTS.md 快照、压缩摘要）里包含该内容；
 3. **人机信息差**：界面上你还看得见、模型已经看不见。你说"你刚才说的那个"，
    它会真的不知道——这是软删除最容易踩的坑，不是幻觉。
+
+---
+
+## 安装（手动 / 排错）
+
+一条命令的版本：
+
+```text
+plugin_manager(action="install_bundle", target="<插件目录的绝对路径>")
+```
+
+然后 **Ctrl+F5**。`target` 指向**目录**，里面必须能直接看到 `package.json`。
+
+| 现象 | 怎么办 |
+|---|---|
+| 装好了但页面没有按钮 | Ctrl+F5；再 `list_plugins` 确认 `include:dsh-turn-delete` 是 `enabled: true` |
+| `application: "failed"` | 把 `error` + `nextStep` 原文贴给 AI |
+| `restart-required` | 重启 DSH |
+| 有按钮但点了没反应 | 看弹窗底部红字 |
+
+完整版（含给 AI 的提示词、五种失败排查、卸载、改代码后怎么生效）见 **[INSTALL.md](INSTALL.md)**。
 
 ---
 
@@ -193,6 +215,7 @@ tools/
   session-surgery.mjs       物理重建工具（默认 dry-run）
   repair-refs.mjs           引用修复工具
 docs/images/                README 用的效果截图
+INSTALL.md                  安装指南（重点：怎么让 AI 帮你装）
 删除对话-方案分析.md         底层原理、方案对比、实测结论与事故记录
 dsh-chat-delete-prototype.html  最初的交互原型（纯静态页面）
 ```
@@ -204,11 +227,12 @@ dsh-chat-delete-prototype.html  最初的交互原型（纯静态页面）
 A DSH plugin that soft-deletes whole conversation turns from the **model-visible history**:
 it appends a `surfaceOp: {op:'replace'}` record so the shadowed turns never enter a request
 again, while the transcript and the on-disk log keep every original event. Deleted turns are
-rendered dimmed with a strikethrough and an "已从上下文移除 / Removed from context" chip.
+rendered dimmed with a strikethrough and an "Removed from context" chip.
 
-Install by pointing `plugin_manager` `install_bundle` at the `dsh-turn-delete-plugin/`
-directory, then reload the page. Usage: **选择对话 → pick turns → 删除 N 轮**, or type
-`/turn-delete 2,3` in the composer.
+**Install:** clone this repo, then have your agent run
+`plugin_manager(action="install_bundle", target="<absolute path to dsh-turn-delete-plugin>")`
+and reload the page. See [INSTALL.md](INSTALL.md) for the copy-paste prompt.
+**Use:** 「选择对话」→ pick turns → 「删除 N 轮」, or type `/turn-delete 2,3` in the composer.
 
 ---
 
