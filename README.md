@@ -47,6 +47,7 @@
 - [它是怎么工作的](#它是怎么工作的)
 - [会删除什么、不会删除什么](#会删除什么不会删除什么)
 - [安装（手动 / 排错）](#安装手动--排错)
+- [更新已有安装](#更新已有安装)
 - [附带工具（谨慎使用）](#附带工具谨慎使用)
 - [仓库结构](#仓库结构)
 - [许可](#许可)
@@ -171,6 +172,30 @@ plugin_manager(action="install_bundle", target="<插件目录的绝对路径>")
 | 有按钮但点了没反应 | 看弹窗底部红字 |
 
 完整版（含给 AI 的提示词、五种失败排查、卸载、改代码后怎么生效）见 **[INSTALL.md](INSTALL.md)**。
+
+---
+
+## 更新已有安装
+
+先看版本：打开任意会话 →「选择对话」→ 弹窗标题右边有版本号（如 `v1.0.2`）。
+
+在插件仓库目录执行：
+
+```
+git pull --ff-only
+```
+
+然后在 DSH 里重载插件（**宿主端代码改了，光刷新页面不够**）：
+
+```text
+plugin_manager(action="set_plugin", target="include:dsh-turn-delete", enabled=false)
+plugin_manager(action="set_plugin", target="include:dsh-turn-delete", enabled=true)
+```
+
+最后 **Ctrl+F5**。只改了界面样式的版本可以跳过重载、直接刷新。
+
+更省事的办法：把 [UPDATE.md](UPDATE.md) 里的提示词整段发给 AI，它会自己拉代码、重载、报版本。
+订阅更新：仓库页 **Watch → Custom → Releases**。
 
 ---
 

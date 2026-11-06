@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-turn-delete",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
   "description": "勾选并软删除 DSH 会话里的若干轮对话：模型视野删除，日志原文保留",

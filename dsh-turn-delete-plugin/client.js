@@ -14,6 +14,7 @@ window.__ModuleLoader__.load({
     const h = React.createElement;
     const NS = 'turnDelete';
     const COMMAND = 'turn-delete';
+    const VERSION = '1.0.2';
 
     const ZH = {
       'action.select': '选择对话',
@@ -346,7 +347,9 @@ window.__ModuleLoader__.load({
 
         const dialog = state.selecting ? h('div', { style: overlay },
           h('div', { style: panel, role: 'dialog', 'aria-modal': 'true', onClick: (event) => event.stopPropagation() },
-            h('div', { style: { fontSize: 14, fontWeight: 600 } }, t('dialog.title')),
+            h('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8 } },
+              h('div', { style: { fontSize: 14, fontWeight: 600 } }, t('dialog.title')),
+              h('div', { style: { fontSize: 11, color: 'var(--dsw-alias-label-caption)' } }, 'v' + VERSION)),
             h('div', { style: { fontSize: 12, marginTop: 4, color: 'var(--dsw-alias-label-caption)' } }, t('dialog.hint')),
             h('div', { style: { marginTop: 10, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 2 } },
               rows.length === 0 ? h('div', { style: { padding: 12, fontSize: 13, color: 'var(--dsw-alias-label-caption)' } }, t('dialog.empty')) : rows),
