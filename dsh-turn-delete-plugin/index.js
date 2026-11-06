@@ -88,16 +88,17 @@ function run(invocation, ctx) {
     }
     shadowed.sort((left, right) => left - right);
     try {
-      // A v4 log requires a positive step on system/message; the turn's own last
-      // step keeps the record consistent with the turn it replaces.
-      const step = lastStep.get(turn) ?? 1;
+      // 关键：v4 校验要求 system/message 必须落在【打开的】turn+step 内
+      // （"system/message does not match an open turn and step"），而命令是在
+      // 轮次之外执行的——所以替换节点必须用 user/message（它不要求 turn/step）。
+      // 内容给一小段占位文字：空内容的 user 消息发给模型可能被拒。
       const message = {
         id: 'turn-delete-' + turn + '-' + session.seq,
-        role: 'system',
-        content: [],
-        source: { kind: 'system-prompt' },
+        role: 'user',
+        content: [{ type: 'text', text: '（已移除一轮对话）' }],
+        source: { kind: 'user' },
       };
-      session.append('system/message', { turn, step, message }, {
+      session.append('user/message', message, {
         surfaceOp: { op: 'replace', startSeq: shadowed[0], endSeq: shadowed[shadowed.length - 1] },
         sourceEventSeqs: shadowed,
       });

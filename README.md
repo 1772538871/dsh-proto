@@ -139,6 +139,11 @@ DSH 把"历史"分成两套东西：
 - 其他轮次、系统提示词
 - 附件文件本身
 
+> **删除位置会留一条极小的占位提示**：`（已移除一轮对话）`，约 10 token。
+> 原因：DSH 的 v4 日志要求 `system/message` 只能写在**打开的**轮次里，而删除命令在轮次之外执行，
+> 所以替换节点只能用不要求 turn/step 的 `user/message`；而空内容的 user 消息可能被模型接口拒绝，
+> 因此给一句占位。副作用是模型知道"这里删过东西"，不会对着上下文空洞发懵。
+
 **三种"内容可能绕回来"的情况**：
 
 1. 后续轮次里模型复述过被删内容——那属于后面那条消息；
@@ -198,6 +203,23 @@ node tools/repair-refs.mjs <会话目录> --apply   # 备份后修复
 只重写替换节点的 `sourceEventSeqs`（改成实际的遮蔽集合），不动 seq、不删事件。
 用于修复早期版本插件把该字段写成嵌套数组（`[[8,12],20]`）导致的"重启后会话加载失败"。
 
+### `fix-bad-replace.mjs` —— 修复"轮次外写的替换节点"
+
+```bash
+node tools/fix-bad-replace.mjs <会话目录>          # 只检查
+node tools/fix-bad-replace.mjs <会话目录> --apply   # 备份后修复
+```
+
+**症状**：会话打开时报
+`SessionFormatError: system/message does not match an open turn and step`。
+
+**原因**：v4 日志要求 `system/message` 必须落在**打开的** turn+step 内；早期版本插件在
+轮次之外追加了这种替换节点，重启后校验直接拒绝，会话打不开。
+
+**修法**：把那条事件改成 `user/message`（不要求 turn/step），`surfaceOp` / `sourceEventSeqs`
+/ `seq` 全部保持不变——删除语义不变，会话恢复可读。已经是 `user/message` 但内容为空的，
+顺带补上 `（已移除一轮对话）` 占位文字。
+
 ---
 
 ## 仓库结构
@@ -214,6 +236,7 @@ dsh-turn-delete-plugin/     插件本体（就是安装这个目录）
 tools/
   session-surgery.mjs       物理重建工具（默认 dry-run）
   repair-refs.mjs           引用修复工具
+  fix-bad-replace.mjs       修复"轮次外写的替换节点"（会话打不开时用）
 docs/images/                README 用的效果截图
 INSTALL.md                  安装指南（重点：怎么让 AI 帮你装）
 删除对话-方案分析.md         底层原理、方案对比、实测结论与事故记录
