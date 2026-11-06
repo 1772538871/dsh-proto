@@ -174,11 +174,48 @@ plugin_manager(action="install_bundle", target="<插件目录的绝对路径>")
 
 ---
 
+## 安全说明（务必读）
+
+**1.0.0 有过一次事故**：删除后用 `system/message` 当替换节点，而 DSH 的 v4 日志
+要求这类事件必须落在**打开的**轮次里——命令是在轮次之外执行的，写入时没被拦，
+**重启 DSH 重新读盘时被校验器拒绝**，会话打不开。1.0.1 已修复。
+
+现在的保证：
+
+| 措施 | 说明 |
+|---|---|
+| 只用公开 API 写入 | `session.append(...)`，不手改日志、不动 seq |
+| 替换节点用 `user/message` | v4 对它不要求 turn/step，命令在轮次外执行也合法 |
+| 引用强制规整 | `sourceEventSeqs` 一律展平成升序数字数组，非纯数字直接拒绝写入 |
+| 全文可校验 | 用 DSH 自己的 `assertReleasedV4Relationships` 验，和宿主读盘同一套规则 |
+| 出事可修 | `tools/doctor.mjs` 全库体检，`tools/fix-bad-replace.mjs` 定点修复 |
+
+**升级后建议跑一次体检**（只读，不改任何东西）：
+
+```bash
+node tools/doctor.mjs
+```
+
+输出里"可修复/仍不可用"为 0 就说明你的会话库是干净的。
+老代际（v0/v3）的会话会被自动跳过——宿主读取时会做版本迁移，不需要在这里判定。
+
+---
+
 ## 附带工具（谨慎使用）
 
-`tools/` 里两个脚本是**离线会话手术**工具，用于"连磁盘原文一起清掉"的场景。
+`tools/` 里几个脚本是**离线会话手术**工具，用于"连磁盘原文一起清掉"或"修复被写坏的日志"。
 它们直接操作会话日志文件，**不属于日常使用**，请先读
 [删除对话-方案分析.md](删除对话-方案分析.md) 第 5 节了解风险。
+
+### `doctor.mjs` —— 全库体检（只读）
+
+```bash
+node tools/doctor.mjs            # 体检所有会话
+node tools/doctor.mjs --fix      # 备份后修复本插件写坏的那一类
+```
+
+用 DSH 官方的 v4 关系校验器逐个验证；能过就说明会话能正常打开。
+`--fix` 只会动本插件写过的替换节点，不碰别的数据。
 
 ### `session-surgery.mjs` —— 物理删除某几轮（重建会话日志）
 
@@ -237,6 +274,7 @@ tools/
   session-surgery.mjs       物理重建工具（默认 dry-run）
   repair-refs.mjs           引用修复工具
   fix-bad-replace.mjs       修复"轮次外写的替换节点"（会话打不开时用）
+  doctor.mjs                全库体检（用官方校验器逐个验）
 docs/images/                README 用的效果截图
 INSTALL.md                  安装指南（重点：怎么让 AI 帮你装）
 删除对话-方案分析.md         底层原理、方案对比、实测结论与事故记录
