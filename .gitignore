@@ -1,0 +1,11 @@
+# 会话日志备份：包含真实对话内容，绝不上传
+backups/
+*.jsonl.zstd
+*.zstd
+
+# 系统/编辑器噪音
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Turn Delete",
+    "description": "Pick and soft-delete whole conversation turns: the model stops seeing them while the log keeps every original event"
+  }
+}

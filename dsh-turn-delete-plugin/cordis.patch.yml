@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-turn-delete
+      name: '@local/dsh-turn-delete'
